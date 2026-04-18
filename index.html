@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="assets/icons/television (1).png">
+
+    <title>HUNCHOPLUS | Discover and recommend movies & shows.</title>
+    <meta name="description"
+        content="Discover trending movies, TV shows, and trailers. Save your watchlist and explore entertainment effortlessly.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --accent: #A138CA;
+            --accent-dim: rgba(161, 56, 202, 0.18);
+            --accent-glow: rgba(161, 56, 202, 0.35);
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(161, 56, 202, 0.45);
+            --sidebar-width: 240px;
+            --sidebar-collapsed-width: 68px;
+            --topbar-height: 68px;
+            --gap: 14px;
+            --card-width: 160px;
+        }
+
+        /* ── Uniform cards ── */
+        .movie-card {
+            flex: 0 0 var(--card-width);
+            width: var(--card-width);
+            min-width: var(--card-width);
+            max-width: var(--card-width);
+        }
+
+        /* ── Movie row ── */
+        .movie-row {
+            display: flex;
+            gap: 14px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+        }
+
+        .movie-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+        }
+
+        /* ══ App shell ══ */
+        #app {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            padding: var(--gap) var(--gap) var(--gap) 0;
+        }
+
+        /* ══ Sidebar wrapper ══ */
+        #sidebar-wrapper {
+            width: calc(var(--gap) + var(--sidebar-width) + var(--gap));
+            flex-shrink: 0;
+            padding: 0 var(--gap);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sidebar-wrapper.collapsed {
+            width: calc(var(--gap) + var(--sidebar-collapsed-width) + var(--gap));
+        }
+
+        #sidebar {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            padding: 22px 14px 18px;
+            overflow: hidden;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sidebar-wrapper.collapsed .sidebar-text,
+        #sidebar-wrapper.collapsed #logo-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+            pointer-events: none;
+            transition: opacity 0.2s, width 0.3s;
+        }
+
+        #sidebar-wrapper.collapsed .nav-link {
+            justify-content: center;
+            padding: 10px 0;
+        }
+
+        #sidebar-wrapper.collapsed .sidebar-section-label {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-shrink: 0;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .logo-img {
+            width: 34px;
+            height: 34px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            background: var(--accent-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-img svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .logo-img img {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        #logo-text {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+            background: linear-gradient(90deg, #fff 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: opacity 0.2s, width 0.3s;
+        }
+
+        #desktop-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        #desktop-toggle:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        #desktop-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-links-top {
+            flex: 1;
+        }
+
+        .sidebar-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.3);
+            padding: 0 10px;
+            margin-bottom: 4px;
+            margin-top: 18px;
+            white-space: nowrap;
+            transition: opacity 0.2s, height 0.3s, margin 0.3s;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            text-decoration: none;
+            margin-bottom: 2px;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+        }
+
+        .nav-link.active {
+            background: var(--accent-dim);
+            color: #fff;
+            border: 1px solid var(--accent-glow);
+        }
+
+        .nav-icon {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-icon svg {
+            width: 19px;
+            height: 19px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.07);
+            margin: 12px 0;
+        }
+
+        .sidebar-settings {
+            flex-shrink: 0;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            margin-top: 8px;
+        }
+
+        /* ══ Main ══ */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            gap: var(--gap);
+        }
+
+        #topbar {
+            height: var(--topbar-height);
+            flex-shrink: 0;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 0 20px;
+            /* No position:relative here — search suggestions escape via fixed positioning */
+        }
+
+        .search-wrapper {
+            width: 380px;
+            max-width: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .search-wrapper .search-icon {
+            position: absolute;
+            left: 14px;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .search-wrapper .search-icon svg {
+            width: 17px;
+            height: 17px;
+            stroke: rgba(255, 255, 255, 0.4);
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+        }
+
+        #search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(161, 56, 202, 0.3);
+            border-radius: 12px;
+            padding: 10px 16px 10px 42px;
+            color: #fff;
+            font-family: 'Public Sans', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #search-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .search-wrapper.focused #search-input,
+        #search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+
+        /* Search suggestions — controlled via JS fixed positioning */
+        #search-suggestions {
+            position: fixed;
+            z-index: 9000;
+            display: none;
+            background: rgba(10, 5, 20, 0.97);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .topbar-spacer {
+            flex: 1;
+        }
+
+        .btn-download {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+            flex-shrink: 0;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+
+        .btn-download:hover {
+            opacity: 0.85;
+            transform: translateY(-1px);
+        }
+
+        .btn-download:active {
+            transform: translateY(0);
+        }
+
+        /* ── Content ── */
+        #content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 22px;
+        }
+
+        #content::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        #content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #content::-webkit-scrollbar-thumb {
+            background: rgba(161, 56, 202, 0.4);
+            border-radius: 10px;
+        }
+
+        /* ══ Trending hero ══ */
+        #trending-hero {
+            position: relative;
+            width: 100%;
+            height: 430px;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 32px;
+            flex-shrink: 0;
+        }
+
+        .hero-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.85s ease;
+            pointer-events: none;
+        }
+
+        .hero-slide.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transform: scale(1.02);
+        }
+
+        .hero-slide.active .hero-bg {
+            transform: scale(1);
+            transition: transform 6s ease;
+        }
+
+        .hero-gradient {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom,
+                    rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.1) 30%,
+                    rgba(0, 0, 0, 0.55) 60%, rgba(0, 0, 0, 0.93) 100%);
+        }
+
+        .hero-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 28px 30px;
+            gap: 11px;
+        }
+
+        .hero-trending-badge {
+            position: absolute;
+            top: 20px;
+            left: 26px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(161, 56, 202, 0.55);
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-genres {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .hero-genre-tag {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .hero-title {
+            font-size: clamp(22px, 2.8vw, 36px);
+            font-weight: 700;
+            line-height: 1.12;
+            letter-spacing: -0.01em;
+            color: #fff;
+            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+            max-width: 620px;
+        }
+
+        .hero-desc {
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.68);
+            max-width: 500px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 2px;
+            flex-wrap: wrap;
+        }
+
+        .btn-watch-now {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 11px 22px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: opacity 0.2s, transform 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn-watch-now:hover {
+            opacity: 0.86;
+            transform: translateY(-1px);
+        }
+
+        .btn-watch-now:active {
+            transform: translateY(0);
+        }
+
+        .btn-watch-now svg {
+            width: 14px;
+            height: 14px;
+            fill: #fff;
+            stroke: none;
+        }
+
+        .btn-hero-trailer {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 0 16px;
+            height: 43px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.9);
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.2s, transform 0.15s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn-hero-trailer:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: translateY(-1px);
+        }
+
+        .btn-hero-trailer:active {
+            transform: translateY(0);
+        }
+
+        .btn-icon-action {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            width: 43px;
+            height: 43px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.25s, transform 0.15s;
+            flex-shrink: 0;
+        }
+
+        .btn-icon-action:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: translateY(-1px);
+        }
+
+        .btn-icon-action:active {
+            transform: translateY(0);
+        }
+
+        .btn-icon-action svg {
+            width: 18px;
+            height: 18px;
+            stroke: rgba(255, 255, 255, 0.85);
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: stroke 0.2s, fill 0.2s;
+        }
+
+        .btn-icon-action.liked {
+            background: rgba(220, 40, 90, 0.18);
+            border-color: rgba(220, 40, 90, 0.5);
+        }
+
+        .btn-icon-action.liked svg {
+            stroke: #e8335a;
+            fill: #e8335a;
+        }
+
+        .btn-icon-action.watchlisted {
+            background: var(--accent-dim);
+            border-color: var(--accent-glow);
+        }
+
+        .btn-icon-action.watchlisted svg {
+            stroke: #c96aec;
+            fill: rgba(161, 56, 202, 0.25);
+        }
+
+        #hero-progress {
+            position: absolute;
+            bottom: 22px;
+            right: 22px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50px;
+            padding: 7px 12px;
+            z-index: 10;
+        }
+
+        .hero-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.28);
+            cursor: pointer;
+            transition: background 0.3s, width 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s;
+            flex-shrink: 0;
+        }
+
+        .hero-dot.active {
+            background: var(--accent);
+            width: 22px;
+            border-radius: 4px;
+        }
+
+        .hero-skeleton {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.03) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s infinite;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 13px;
+            gap: 10px;
+        }
+
+        .hero-skeleton svg {
+            width: 28px;
+            height: 28px;
+            stroke: rgba(161, 56, 202, 0.4);
+            fill: none;
+            stroke-width: 1.4;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* ── Section heading ── */
+        .section-heading {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-heading .section-emoji {
+            font-size: 17px;
+        }
+
+        .section-heading span {
+            color: rgba(255, 255, 255, 0.35);
+            font-weight: 400;
+            font-size: 13px;
+        }
+
+        /* ══ Mobile topbar ══ */
+        #mobile-topbar {
+            display: none;
+            height: 60px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            flex-shrink: 0;
+        }
+
+        .mobile-logo-area {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .mobile-logo-text {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            background: linear-gradient(90deg, #fff 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #mobile-menu-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        #mobile-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        #mobile-menu-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+        }
+
+        #mobile-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 90;
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #mobile-overlay.visible {
+            display: block;
+            opacity: 1;
+        }
+
+        #mobile-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 272px;
+            height: 100vh;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            padding: 22px 14px 28px;
+            transform: translateX(-100%);
+            transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #mobile-nav.open {
+            transform: translateX(0);
+        }
+
+        .mobile-nav-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        #mobile-nav-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        #mobile-nav-close:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        #mobile-nav-close svg {
+            width: 20px;
+            height: 20px;
+            stroke: rgba(255, 255, 255, 0.6);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        .mobile-nav-links {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+
+        .mobile-nav-links::-webkit-scrollbar {
+            display: none;
+        }
+
+        .mobile-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 11px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .mobile-nav-link:hover {
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+        }
+
+        .mobile-nav-link.active {
+            background: var(--accent-dim);
+            color: #fff;
+            border: 1px solid var(--accent-glow);
+        }
+
+        .mobile-nav-link .nav-icon {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-nav-link .nav-icon svg {
+            width: 19px;
+            height: 19px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .mobile-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.3);
+            padding: 0 10px;
+            margin-bottom: 4px;
+            margin-top: 18px;
+        }
+
+        .mobile-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.07);
+            margin: 12px 0;
+        }
+
+        .mobile-nav-footer {
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-download-mobile {
+            width: 100%;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-family: 'Public Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: opacity 0.2s;
+        }
+
+        .btn-download-mobile:hover {
+            opacity: 0.88;
+        }
+
+        /* ══ Responsive ══ */
+        @media (max-width: 768px) {
+            #app {
+                flex-direction: column;
+                padding: 0;
+                gap: 0;
+                height: 100vh;
+            }
+
+            #sidebar-wrapper {
+                display: none;
+            }
+
+            #mobile-topbar {
+                display: flex;
+                border-bottom: 1px solid rgba(161, 56, 202, 0.25);
+            }
+
+            #main {
+                flex: 1;
+                gap: 0;
+                overflow: hidden;
+            }
+
+            #topbar {
+                border-radius: 0;
+                border-bottom: 1px solid rgba(161, 56, 202, 0.15);
+                height: 58px;
+                padding: 0 14px;
+            }
+
+            .search-wrapper {
+                width: 100%;
+            }
+
+            .topbar-spacer {
+                display: none;
+            }
+
+            .btn-download {
+                display: none;
+            }
+
+            #content {
+                border-radius: 0;
+                border: none;
+                background: transparent;
+                padding: 18px 14px 80px;
+            }
+
+            :root {
+                --card-width: 140px;
+            }
+
+            #trending-hero {
+                height: 360px;
+                border-radius: 14px;
+            }
+
+            .hero-trending-badge {
+                top: 14px;
+                left: 14px;
+                font-size: 10px;
+                padding: 5px 10px;
+            }
+
+            .hero-content {
+                padding: 16px;
+                gap: 9px;
+            }
+
+            .hero-title {
+                font-size: 19px;
+            }
+
+            .hero-desc {
+                font-size: 12px;
+                max-width: 100%;
+            }
+
+            .btn-watch-now {
+                padding: 10px 16px;
+                font-size: 12px;
+            }
+
+            .btn-hero-trailer {
+                padding: 0 12px;
+                height: 38px;
+                font-size: 12px;
+            }
+
+            .btn-icon-action {
+                width: 38px;
+                height: 38px;
+            }
+
+            #hero-progress {
+                bottom: 14px;
+                right: 14px;
+                padding: 5px 10px;
+                gap: 5px;
+            }
+
+            .hero-dot {
+                width: 6px;
+                height: 6px;
+            }
+
+            .hero-dot.active {
+                width: 16px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            #mobile-topbar {
+                display: none !important;
+            }
+
+            #mobile-nav {
+                display: none !important;
+            }
+
+            #mobile-overlay {
+                display: none !important;
+            }
+        }
+
+        * {
+            font-family: 'Poppins', sans-serif !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ══ Mobile Overlay ══ -->
+    <div id="mobile-overlay"></div>
+
+    <!-- ══ Mobile Nav Drawer ══ -->
+    <nav id="mobile-nav" class="glass">
+        <div class="mobile-nav-header">
+            <div class="mobile-logo-area">
+                <div class="logo-img">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#A138CA" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8M12 17v4" />
+                    </svg>
+                </div>
+                <span class="mobile-logo-text">HUNCHOPLUS</span>
+            </div>
+            <button id="mobile-nav-close">
+                <svg viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="mobile-nav-links">
+            <div class="mobile-section-label">Menu</div>
+            <a class="mobile-nav-link active" href="#" data-action="home"><span class="nav-icon"><svg
+                        viewBox="0 0 24 24">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg></span>Home</a>
+            <a class="mobile-nav-link" href="#" data-action="explore"><span class="nav-icon"><svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg></span>Explore</a>
+            <a class="mobile-nav-link" href="#" data-action="movies"><span class="nav-icon"><svg viewBox="0 0 24 24">
+                        <rect x="2" y="2" width="20" height="20" rx="3" />
+                        <polygon points="10 8 16 12 10 16 10 8" />
+                    </svg></span>Movies</a>
+            <a class="mobile-nav-link" href="#" data-action="series"><span class="nav-icon"><svg viewBox="0 0 24 24">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8M12 17v4" />
+                    </svg></span>TV Shows</a>
+
+            <div class="mobile-divider"></div>
+            <div class="mobile-section-label">Library</div>
+
+            <a class="mobile-nav-link" href="#" data-action="history"><span class="nav-icon"><svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg></span>History</a>
+            <a class="mobile-nav-link" href="#" data-action="watchlist"><span class="nav-icon"><svg viewBox="0 0 24 24">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg></span>Watchlist</a>
+            <a class="mobile-nav-link" href="#" data-action="liked"><span class="nav-icon"><svg viewBox="0 0 24 24">
+                        <path
+                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg></span>Liked Videos</a>
+
+            <div class="mobile-divider"></div>
+            <a class="mobile-nav-link" href="#" data-action="settings"><span class="nav-icon"><svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg></span>Settings</a>
+        </div>
+
+        <div class="mobile-nav-footer">
+            <button class="btn-download-mobile">⬇ Download App</button>
+        </div>
+    </nav>
+
+    <!-- ══ App Shell ══ -->
+    <div id="app">
+
+        <!-- ══ SIDEBAR ══ -->
+        <div id="sidebar-wrapper">
+            <aside id="sidebar" class="glass">
+                <div class="sidebar-header">
+                    <div class="logo-area">
+                        <div class="logo-img">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#A138CA" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" />
+                                <path d="M8 21h8M12 17v4" />
+                            </svg>
+                        </div>
+                        <span id="logo-text">HUNCHOPLUS</span>
+                    </div>
+                    <button id="desktop-toggle" title="Toggle sidebar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2"
+                            stroke-linecap="round">
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <div class="nav-links-top">
+                        <div class="sidebar-section-label sidebar-text">Menu</div>
+                        <a class="nav-link active" href="#" data-action="home"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                    <polyline points="9 22 9 12 15 12 15 22" />
+                                </svg></span><span class="sidebar-text">Home</span></a>
+                        <a class="nav-link" href="#" data-action="explore"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg></span><span class="sidebar-text">Explore</span></a>
+                        <a class="nav-link" href="#" data-action="movies"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <rect x="2" y="2" width="20" height="20" rx="3" />
+                                    <polygon points="10 8 16 12 10 16 10 8" />
+                                </svg></span><span class="sidebar-text">Movies</span></a>
+                        <a class="nav-link" href="#" data-action="series"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                                    <path d="M8 21h8M12 17v4" />
+                                </svg></span><span class="sidebar-text">TV Shows</span></a>
+
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-label sidebar-text">Library</div>
+
+                        <a class="nav-link" href="#" data-action="history"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg></span><span class="sidebar-text">History</span></a>
+                        <a class="nav-link" href="#" data-action="watchlist"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                                </svg></span><span class="sidebar-text">Watchlist</span></a>
+                        <a class="nav-link" href="#" data-action="liked"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <path
+                                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                </svg></span><span class="sidebar-text">Liked Videos</span></a>
+                    </div>
+
+                    <div class="sidebar-settings">
+                        <a class="nav-link" href="#" data-action="settings"><span class="nav-icon"><svg
+                                    viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="3" />
+                                    <path
+                                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                                </svg></span><span class="sidebar-text">Settings</span></a>
+                    </div>
+                </nav>
+            </aside>
+        </div>
+
+        <!-- ══ MAIN AREA ══ -->
+        <div id="main">
+
+            <!-- Mobile topbar -->
+            <header id="mobile-topbar" class="glass">
+                <div class="mobile-logo-area">
+                    <div class="logo-img">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#A138CA" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                            <path d="M8 21h8M12 17v4" />
+                        </svg>
+                    </div>
+                    <span class="mobile-logo-text">HUNCHOPLUS</span>
+                </div>
+                <button id="mobile-menu-btn">
+                    <svg viewBox="0 0 24 24">
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                </button>
+            </header>
+
+            <!-- Desktop topbar -->
+            <header id="topbar" class="glass">
+                <div class="search-wrapper relative">
+                    <span class="search-icon">
+                        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                    </span>
+                    <input id="search-input" type="text" placeholder="Search movies, shows, trailers…">
+                </div>
+                <div class="topbar-spacer"></div>
+                <button class="btn-download">⬇ Download App</button>
+            </header>
+
+            <!-- Scrollable content -->
+            <main id="content">
+
+                <!-- Hero -->
+                <div id="trending-hero">
+                    <div class="hero-skeleton" id="hero-skeleton">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                            <path d="M8 21h8M12 17v4" />
+                        </svg>
+                        Loading trending…
+                    </div>
+                </div>
+
+                <!-- ═══ 5 ORIGINAL ROWS ═══ -->
+                <section class="mt-8">
+                    <h2 class="section-heading"><span class="section-emoji">🎬</span> Popular Movies <span>— trending
+                            worldwide</span></h2>
+                    <div id="row-popular-movies" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">📺</span> Popular TV Shows <span>— binge
+                            worthy</span></h2>
+                    <div id="row-popular-tv" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">🏆</span> Top Rated <span>— best of the
+                            best</span></h2>
+                    <div id="row-top-rated" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">🗓️</span> Coming Soon <span>— upcoming
+                            releases</span></h2>
+                    <div id="row-upcoming" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">⛩️</span> Anime <span>— curated picks</span>
+                    </h2>
+                    <div id="row-anime" class="movie-row"></div>
+                </section>
+
+                <!-- ═══ 5 NEW ROWS ═══ -->
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">💥</span> Action & Adventure <span>— high
+                            octane</span></h2>
+                    <div id="row-action" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">👻</span> Horror <span>— if you dare</span>
+                    </h2>
+                    <div id="row-horror" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">🚀</span> Sci-Fi & Fantasy <span>— beyond
+                            imagination</span></h2>
+                    <div id="row-scifi" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">💕</span> Romance <span>— feel the
+                            love</span></h2>
+                    <div id="row-romance" class="movie-row"></div>
+                </section>
+
+                <section class="mt-10">
+                    <h2 class="section-heading"><span class="section-emoji">🎙️</span> Documentaries <span>— real
+                            stories</span></h2>
+                    <div id="row-documentaries" class="movie-row"></div>
+                </section>
+
+                <!-- Footer -->
+                <footer class="w-full mt-12">
+                    <div
+                        style="background:rgba(255,255,255,0.04);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(161,56,202,0.45);border-radius:14px;padding:20px 28px;">
+                        <div
+                            style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
+                            <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                                <div
+                                    style="width:30px;height:30px;border-radius:8px;background:rgba(161,56,202,0.18);display:flex;align-items:center;justify-content:center;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A138CA"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                                        <path d="M8 21h8M12 17v4" />
+                                    </svg>
+                                </div>
+                                <span
+                                    style="font-size:14px;font-weight:700;letter-spacing:0.06em;background:linear-gradient(90deg,#fff 0%,#A138CA 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">HUNCHOPLUS</span>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center;">
+                                <a href="#" data-action="home" class="footer-nav-link"
+                                    style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none;font-weight:500;padding:5px 11px;border-radius:7px;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.07)';this.style.color='#fff'"
+                                    onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">Trending</a>
+                                <a href="#" data-action="movies" class="footer-nav-link"
+                                    style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none;font-weight:500;padding:5px 11px;border-radius:7px;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.07)';this.style.color='#fff'"
+                                    onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">Movies</a>
+                                <a href="#" data-action="series" class="footer-nav-link"
+                                    style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none;font-weight:500;padding:5px 11px;border-radius:7px;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.07)';this.style.color='#fff'"
+                                    onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">TV
+                                    Shows</a>
+                                <a href="#" data-action="watchlist" class="footer-nav-link"
+                                    style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none;font-weight:500;padding:5px 11px;border-radius:7px;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.07)';this.style.color='#fff'"
+                                    onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">My
+                                    List</a>
+                                <a href="#"
+                                    style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none;font-weight:500;padding:5px 11px;border-radius:7px;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.07)';this.style.color='#fff'"
+                                    onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">Help
+                                    Center</a>
+                                <a href="#"
+                                    style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none;font-weight:500;padding:5px 11px;border-radius:7px;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.07)';this.style.color='#fff'"
+                                    onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">Privacy</a>
+                            </div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.2);white-space:nowrap;flex-shrink:0;">
+                                &copy; 2026 HunchoPlus</div>
+                        </div>
+                        <div
+                            style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(161,56,202,0.15);text-align:center;">
+                            <span style="font-size:11px;color:rgba(255,255,255,0.15);letter-spacing:0.04em;">Powered by
+                                TMDB API &nbsp;·&nbsp; Stream. Discover. Enjoy.</span>
+                        </div>
+                    </div>
+                </footer>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Search suggestions — moved to body level for correct z-index stacking -->
+    <div id="search-suggestions"></div>
+
+    <script>
+        // Wire footer nav links to view switcher
+        document.querySelectorAll('.footer-nav-link[data-action]').forEach(link => {
+            link.addEventListener('click', e => {
+                e.preventDefault();
+                if (window.__switchView) window.__switchView(link.dataset.action);
+                // scroll content to top
+                document.getElementById('content')?.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+    <script src="globals.js"></script>
+
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>
